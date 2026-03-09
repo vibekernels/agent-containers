@@ -28,7 +28,7 @@ RUN mkdir -p /var/run/sshd /home/ubuntu/.ssh && chmod 700 /home/ubuntu/.ssh \
 WORKDIR /home/ubuntu
 
 # Script that tmux will run (avoids nested quoting issues)
-RUN printf '#!/bin/bash\nsource /etc/rp_environment\nclaude -p "$CLAUDE_PROMPT" --dangerously-skip-permissions --model "${CLAUDE_MODEL:-claude-opus-4-6}" --effort "${CLAUDE_EFFORT:-high}"\nexec bash\n' \
+RUN printf '#!/bin/bash\nsource /etc/rp_environment\nclaude -p "$CLAUDE_PROMPT" --dangerously-skip-permissions --model "${CLAUDE_MODEL:-opus}" --effort "${CLAUDE_EFFORT:-high}"\nexec bash\n' \
     > /home/ubuntu/run-claude.sh && chmod +x /home/ubuntu/run-claude.sh && chown ubuntu:ubuntu /home/ubuntu/run-claude.sh
 
 # Startup script: configure SSH, start Claude Code in tmux
