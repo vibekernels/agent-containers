@@ -2,6 +2,7 @@ FROM --platform=linux/amd64 nvidia/cuda:12.8.1-devel-ubuntu24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV SHELL=/bin/bash
+ENV PATH="/home/ubuntu/.local/bin:${PATH}"
 
 # Install essentials + SSH
 RUN apt-get update && apt-get install -y --no-install-recommends \

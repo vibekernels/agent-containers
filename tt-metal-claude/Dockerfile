@@ -4,6 +4,7 @@ FROM ${BASE_IMAGE}
 
 ARG DEBIAN_FRONTEND=noninteractive
 ENV SHELL=/bin/bash
+ENV PATH="/home/ubuntu/.local/bin:${PATH}"
 
 # Install essentials + SSH
 RUN apt-get update && apt-get install -y --no-install-recommends \
