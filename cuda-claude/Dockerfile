@@ -13,8 +13,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install Claude Code
 RUN npm install -g @anthropic-ai/claude-code
 
-# Create ubuntu user with sudo access
-RUN useradd -m -s /bin/bash ubuntu \
+# Ensure ubuntu user exists with sudo access
+RUN id ubuntu >/dev/null 2>&1 || useradd -m -s /bin/bash ubuntu \
+    && usermod -s /bin/bash ubuntu \
     && echo "ubuntu ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/ubuntu \
     && chmod 0440 /etc/sudoers.d/ubuntu
 
