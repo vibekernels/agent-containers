@@ -78,7 +78,7 @@ grep -q "source /etc/rp_environment" /home/ubuntu/.bashrc 2>/dev/null || \\\n\
 /usr/sbin/sshd\n\
 \n\
 # Start Claude Code in a tmux session as ubuntu user\n\
-su - ubuntu -c "source /etc/rp_environment && tmux new-session -d -s claude '"'"'claude'"'"'"\n\
+su - ubuntu -c "source /etc/rp_environment && tmux new-session -d -s claude '"'"'claude -p \\\"$CLAUDE_PROMPT\\\" --dangerously-skip-permissions; exec bash'"'"'"\n\
 echo "Claude Code started in tmux session. Attach with: tmux attach -t claude"\n\
 \n\
 # Keep container alive\n\
