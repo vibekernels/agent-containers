@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 nvidia/cuda:13.2.0-devel-ubuntu24.04
+FROM --platform=linux/amd64 nvidia/cuda:13.1.1-devel-ubuntu24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV SHELL=/bin/bash
