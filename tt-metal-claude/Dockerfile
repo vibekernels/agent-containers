@@ -5,15 +5,10 @@ FROM ${BASE_IMAGE}
 ARG DEBIAN_FRONTEND=noninteractive
 ENV SHELL=/bin/bash
 
-# Install essentials + SSH + Node.js
+# Install essentials + SSH
 RUN apt-get update && apt-get install -y --no-install-recommends \
     openssh-server sudo git curl wget vim tmux build-essential ca-certificates \
-    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-    && apt-get install -y nodejs \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# Install Claude Code
-RUN npm install -g @anthropic-ai/claude-code
 
 # SSH setup
 RUN mkdir -p /var/run/sshd /root/.ssh \
@@ -32,8 +27,9 @@ RUN id ubuntu >/dev/null 2>&1 || useradd -m -s /bin/bash ubuntu \
     && mkdir -p /home/ubuntu/.ssh && chmod 700 /home/ubuntu/.ssh \
     && chown -R ubuntu:ubuntu /home/ubuntu/.ssh
 
-# Pre-configure Claude Code onboarding
-RUN echo '{"hasCompletedOnboarding":true,"theme":"dark"}' > /home/ubuntu/.claude.json \
+# Install Claude Code and pre-configure onboarding
+RUN su - ubuntu -c "curl -fsSL https://claude.ai/install.sh | bash" \
+    && echo '{"hasCompletedOnboarding":true,"theme":"dark"}' > /home/ubuntu/.claude.json \
     && chown ubuntu:ubuntu /home/ubuntu/.claude.json
 
 # Docker-in-Docker

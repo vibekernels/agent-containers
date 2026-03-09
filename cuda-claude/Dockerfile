@@ -3,15 +3,10 @@ FROM --platform=linux/amd64 nvidia/cuda:12.8.1-devel-ubuntu24.04
 ENV DEBIAN_FRONTEND=noninteractive
 ENV SHELL=/bin/bash
 
-# Install essentials + SSH + Node.js
+# Install essentials + SSH
 RUN apt-get update && apt-get install -y --no-install-recommends \
     openssh-server sudo git curl wget vim tmux build-essential ca-certificates \
-    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-    && apt-get install -y nodejs \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# Install Claude Code
-RUN npm install -g @anthropic-ai/claude-code
 
 # Ensure ubuntu user exists with sudo access
 RUN id ubuntu >/dev/null 2>&1 || useradd -m -s /bin/bash ubuntu \
@@ -19,8 +14,9 @@ RUN id ubuntu >/dev/null 2>&1 || useradd -m -s /bin/bash ubuntu \
     && echo "ubuntu ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/ubuntu \
     && chmod 0440 /etc/sudoers.d/ubuntu
 
-# Pre-configure Claude Code onboarding
-RUN echo '{"hasCompletedOnboarding":true,"theme":"dark"}' > /home/ubuntu/.claude.json \
+# Install Claude Code and pre-configure onboarding
+RUN su - ubuntu -c "curl -fsSL https://claude.ai/install.sh | bash" \
+    && echo '{"hasCompletedOnboarding":true,"theme":"dark"}' > /home/ubuntu/.claude.json \
     && chown ubuntu:ubuntu /home/ubuntu/.claude.json
 
 # SSH setup
