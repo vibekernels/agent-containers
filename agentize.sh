@@ -20,11 +20,10 @@ export LANG=C
 
 echo "==> Setting up locale..."
 apt-get update -qq
-apt-get install -y -qq locales > /dev/null
+apt-get install -y -qq apt-utils locales > /dev/null
 sed -i 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
 locale-gen en_US.UTF-8 > /dev/null
-export LANG=en_US.UTF-8
-export LC_ALL=en_US.UTF-8
+update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
 
 echo "==> Installing sudo, vim, tmux if needed..."
 apt-get install -y -qq sudo vim tmux > /dev/null
