@@ -65,6 +65,9 @@ su - ubuntu -c 'curl -fsSL https://claude.ai/install.sh | bash'
 echo "==> Adding ~/.local/bin to PATH in .bashrc..."
 su - ubuntu -c 'grep -q "/.local/bin" ~/.bashrc || echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> ~/.bashrc'
 
+echo "==> Adding dangerclaude alias to .bashrc..."
+su - ubuntu -c 'grep -q "dangerclaude" ~/.bashrc || echo "alias dangerclaude='"'"'claude --dangerously-skip-permissions'"'"'" >> ~/.bashrc'
+
 echo "==> Pre-configuring Claude Code onboarding..."
 echo '{"hasCompletedOnboarding":true}' > ~ubuntu/.claude.json
 chown ubuntu:ubuntu ~ubuntu/.claude.json
