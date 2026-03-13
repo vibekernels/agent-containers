@@ -57,5 +57,6 @@ sleep infinity\n\
 ' > /start.sh && chmod +x /start.sh
 
 EXPOSE 22
+EXPOSE 8211
 
 CMD ["/start.sh"]
