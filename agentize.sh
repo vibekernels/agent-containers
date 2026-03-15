@@ -105,6 +105,18 @@ TOKENSCRIPT
   echo "    Token set."
 fi
 
+# If we have a HF_TOKEN locally, inject it into ubuntu's .bashrc
+if [ -n "${HF_TOKEN:-}" ]; then
+  echo "==> Setting HF_TOKEN on remote..."
+  $SSH_CMD bash -s << HFSCRIPT
+grep -q "HF_TOKEN" ~ubuntu/.bashrc 2>/dev/null && \
+  sed -i '/HF_TOKEN/d' ~ubuntu/.bashrc
+echo 'export HF_TOKEN="$HF_TOKEN"' >> ~ubuntu/.bashrc
+chown ubuntu:ubuntu ~ubuntu/.bashrc
+HFSCRIPT
+  echo "    HF_TOKEN set."
+fi
+
 # Configure git identity for ubuntu user
 if [ -n "${GIT_USER_NAME:-}" ] || [ -n "${GIT_USER_EMAIL:-}" ]; then
   echo "==> Configuring git identity for ubuntu..."
