@@ -37,12 +37,29 @@ apt-get update -qq
 apt-get install -y -qq sudo vim tmux gh > /dev/null
 
 echo "==> Creating ubuntu user if it doesn't exist..."
-if ! id -u ubuntu &>/dev/null; then
-  useradd -m -s /bin/bash ubuntu
-  echo "    Created ubuntu user."
+if [ -d /workspace ]; then
+  UBUNTU_HOME=/workspace/home/ubuntu
+  echo "    /workspace found, using $UBUNTU_HOME as home directory."
 else
-  echo "    ubuntu user already exists."
+  UBUNTU_HOME=/home/ubuntu
 fi
+
+if ! id -u ubuntu &>/dev/null; then
+  mkdir -p "$UBUNTU_HOME"
+  useradd -m -d "$UBUNTU_HOME" -s /bin/bash ubuntu
+  echo "    Created ubuntu user with home $UBUNTU_HOME."
+else
+  CURRENT_HOME=$(eval echo ~ubuntu)
+  if [ "$CURRENT_HOME" != "$UBUNTU_HOME" ]; then
+    echo "    Moving ubuntu home from $CURRENT_HOME to $UBUNTU_HOME..."
+    mkdir -p "$UBUNTU_HOME"
+    cp -a "$CURRENT_HOME/." "$UBUNTU_HOME/" 2>/dev/null || true
+    usermod -d "$UBUNTU_HOME" ubuntu
+  else
+    echo "    ubuntu user already exists with correct home."
+  fi
+fi
+chown -R ubuntu:ubuntu "$UBUNTU_HOME"
 
 echo "==> Granting ubuntu passwordless sudo..."
 echo "ubuntu ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/ubuntu
