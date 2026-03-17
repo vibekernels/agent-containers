@@ -133,6 +133,16 @@ TOKENSCRIPT
   echo "    Token set."
 fi
 
+# Set CLAUDE_CODE_MAX_OUTPUT_TOKENS for ubuntu
+echo "==> Setting CLAUDE_CODE_MAX_OUTPUT_TOKENS on remote..."
+$SSH_CMD bash -s << 'MAXTOKSCRIPT'
+grep -q "CLAUDE_CODE_MAX_OUTPUT_TOKENS" ~ubuntu/.bashrc 2>/dev/null && \
+  sed -i '/CLAUDE_CODE_MAX_OUTPUT_TOKENS/d' ~ubuntu/.bashrc
+echo 'export CLAUDE_CODE_MAX_OUTPUT_TOKENS="128000"' >> ~ubuntu/.bashrc
+chown ubuntu:ubuntu ~ubuntu/.bashrc
+MAXTOKSCRIPT
+echo "    CLAUDE_CODE_MAX_OUTPUT_TOKENS set."
+
 # If we have a HF_TOKEN locally, inject it into ubuntu's .bashrc
 if [ -n "${HF_TOKEN:-}" ]; then
   echo "==> Setting HF_TOKEN on remote..."
