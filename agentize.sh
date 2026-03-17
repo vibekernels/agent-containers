@@ -51,6 +51,16 @@ if [ -d /workspace ]; then
   chown ubuntu:ubuntu /workspace/.claude 2>/dev/null || true
   ln -sfn /workspace/.claude ~ubuntu/.claude
   chown -h ubuntu:ubuntu ~ubuntu/.claude
+
+  echo "==> Linking ~/.cache to /workspace/.cache for persistence..."
+  mkdir -p /workspace/.cache
+  chown ubuntu:ubuntu /workspace/.cache 2>/dev/null || true
+  if [ -d ~ubuntu/.cache ] && [ ! -L ~ubuntu/.cache ]; then
+    cp -a ~ubuntu/.cache/. /workspace/.cache/ 2>/dev/null || true
+    rm -rf ~ubuntu/.cache
+  fi
+  ln -sfn /workspace/.cache ~ubuntu/.cache
+  chown -h ubuntu:ubuntu ~ubuntu/.cache
 fi
 
 echo "==> Granting ubuntu passwordless sudo..."
