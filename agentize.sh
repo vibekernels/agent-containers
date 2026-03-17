@@ -90,6 +90,9 @@ chmod 600 ~ubuntu/.ssh/known_hosts
 echo "==> Deploy public key:"
 cat ~ubuntu/.ssh/id_ed25519.pub
 
+echo "==> Installing uv for ubuntu..."
+su - ubuntu -c 'curl -LsSf https://astral.sh/uv/install.sh | bash'
+
 echo "==> Installing Claude Code for ubuntu..."
 su - ubuntu -c 'curl -fsSL https://claude.ai/install.sh | bash'
 
