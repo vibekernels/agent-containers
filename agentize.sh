@@ -197,5 +197,5 @@ fi
 # Print the SSH command with username replaced to ubuntu
 UBUNTU_CMD=$(echo "$SSH_CMD" | sed 's/[a-zA-Z0-9_.-]*@/ubuntu@/')
 echo ""
-echo "==> Connect as ubuntu:"
-echo "    $UBUNTU_CMD"
+echo "==> Connecting as ubuntu: $UBUNTU_CMD"
+exec $UBUNTU_CMD
