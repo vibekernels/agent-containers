@@ -2,9 +2,16 @@
 set -euo pipefail
 
 if [ $# -eq 0 ]; then
-  echo "Usage: agentize.sh <ssh-command>"
-  echo "Example: agentize.sh \"ssh -i ~/.ssh/id_ed25519 -p 12599 root@01.proxy.koyeb.app\""
+  echo "Usage: agentize.sh [--repo <git-ssh-url>] <ssh-command>"
+  echo "Example: agentize.sh --repo git@github.com:vibekernels/blenderproc-1x4090.git \"ssh -i ~/.ssh/id_ed25519 -p 12599 root@01.proxy.koyeb.app\""
   exit 1
+fi
+
+GITHUB_REPO=""
+if [ "$1" = "--repo" ]; then
+  shift
+  GITHUB_REPO="$1"
+  shift
 fi
 
 SSH_CMD="$*"
@@ -123,6 +130,25 @@ fi
 
 echo "==> Done! Machine is agentized."
 REMOTE_SCRIPT
+
+# If a GitHub repo was specified, add deploy key and clone
+if [ -n "$GITHUB_REPO" ]; then
+  # Extract owner/repo from SSH URL (e.g. git@github.com:vibekernels/blenderproc-1x4090.git -> vibekernels/blenderproc-1x4090)
+  OWNER_REPO=$(echo "$GITHUB_REPO" | sed 's/.*://' | sed 's/\.git$//')
+
+  echo "==> Fetching deploy public key from remote..."
+  DEPLOY_KEY=$($SSH_CMD cat ~ubuntu/.ssh/id_ed25519.pub)
+
+  echo "==> Adding deploy key to $OWNER_REPO via gh..."
+  echo "$DEPLOY_KEY" | gh repo deploy-key add - --repo "$OWNER_REPO" --title "agentize-$(date +%Y%m%d-%H%M%S)" --allow-write
+  echo "    Deploy key added."
+
+  echo "==> Cloning $GITHUB_REPO to /workspace on remote..."
+  $SSH_CMD bash -s << CLONESCRIPT
+su - ubuntu -c 'cd /workspace && git clone $GITHUB_REPO'
+CLONESCRIPT
+  echo "    Repo cloned."
+fi
 
 # If we have a Claude Code OAuth token locally, inject it into ubuntu's .bashrc
 if [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
