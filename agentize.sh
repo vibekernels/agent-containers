@@ -16,6 +16,9 @@ fi
 
 SSH_CMD="$*"
 
+# Auto-accept new host keys (still warns if a known key changes)
+SSH_CMD="${SSH_CMD} -o StrictHostKeyChecking=accept-new"
+
 GIT_USER_NAME=$(git config --global user.name 2>/dev/null || true)
 GIT_USER_EMAIL=$(git config --global user.email 2>/dev/null || true)
 
