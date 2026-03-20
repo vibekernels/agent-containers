@@ -107,13 +107,14 @@ echo "==> Adding ~/.local/bin to PATH in .bashrc..."
 su - ubuntu -c 'grep -q "/.local/bin" ~/.bashrc || echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> ~/.bashrc'
 
 echo "==> Adding dangerclaude alias to .bashrc..."
-su - ubuntu -c 'grep -q "dangerclaude" ~/.bashrc || echo "alias dangerclaude='"'"'claude --dangerously-skip-permissions'"'"'" >> ~/.bashrc'
+su - ubuntu -c 'grep -q "dangerclaude" ~/.bashrc || echo "alias dangerclaude='"'"'claude --dangerously-skip-permissions --model opus --effort medium'"'"'" >> ~/.bashrc'
 
 echo "==> Adding auto-tmux to .bashrc..."
 su - ubuntu -c 'grep -q "auto-tmux" ~/.bashrc || cat >> ~/.bashrc << '"'"'TMUXBLOCK'"'"'
 
 # auto-tmux: attach to existing session or create one on SSH login
 if [ -z "$TMUX" ] && [ -n "$SSH_CONNECTION" ]; then
+  cd /workspace 2>/dev/null
   tmux attach-session 2>/dev/null || tmux new-session
 fi
 TMUXBLOCK'
