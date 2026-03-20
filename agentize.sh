@@ -101,7 +101,7 @@ echo "==> Installing uv for ubuntu..."
 su - ubuntu -c 'curl -LsSf https://astral.sh/uv/install.sh | bash'
 
 echo "==> Installing Claude Code for ubuntu..."
-su - ubuntu -c 'curl -fsSL https://claude.ai/install.sh | bash'
+su - ubuntu -c 'curl -fsSL https://claude.ai/install.sh | bash' > /dev/null
 
 echo "==> Adding ~/.local/bin to PATH in .bashrc..."
 su - ubuntu -c 'grep -q "/.local/bin" ~/.bashrc || echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> ~/.bashrc'
