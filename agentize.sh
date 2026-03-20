@@ -30,7 +30,8 @@ export LANG=C
 
 echo "==> Setting up locale..."
 apt-get update -qq
-apt-get install -y -qq apt-utils locales > /dev/null
+apt-get install -y -qq apt-utils > /dev/null 2>&1
+apt-get install -y -qq locales > /dev/null
 sed -i 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
 locale-gen en_US.UTF-8 > /dev/null
 update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
