@@ -148,11 +148,17 @@ if [ -n "$GITHUB_REPO" ]; then
   echo "$DEPLOY_KEY" | gh repo deploy-key add - --repo "$OWNER_REPO" --title "agentize-$(date +%Y%m%d-%H%M%S)" --allow-write
   echo "    Deploy key added."
 
+  REPO_DIR=$(basename "$GITHUB_REPO" .git)
   echo "==> Cloning $GITHUB_REPO to /workspace on remote..."
   $SSH_CMD bash -s << CLONESCRIPT
-su - ubuntu -c 'cd /workspace && git clone $GITHUB_REPO'
+if [ -d /workspace/$REPO_DIR/.git ]; then
+  echo "    Repo already exists, fetching latest..."
+  su - ubuntu -c 'cd /workspace/$REPO_DIR && git fetch --all'
+else
+  su - ubuntu -c 'cd /workspace && git clone $GITHUB_REPO'
+fi
 CLONESCRIPT
-  echo "    Repo cloned."
+  echo "    Done."
 fi
 
 # If we have a Claude Code OAuth token locally, inject it into ubuntu's .bashrc
