@@ -164,49 +164,26 @@ CLONESCRIPT
   echo "    Done."
 fi
 
-# If we have a Claude Code OAuth token locally, inject it into ubuntu's .bashrc
-if [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
-  echo "==> Setting CLAUDE_CODE_OAUTH_TOKEN on remote..."
-  $SSH_CMD bash -s << TOKENSCRIPT
-grep -q "CLAUDE_CODE_OAUTH_TOKEN" ~ubuntu/.bashrc 2>/dev/null && \
-  sed -i '/CLAUDE_CODE_OAUTH_TOKEN/d' ~ubuntu/.bashrc
-echo 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"' >> ~ubuntu/.bashrc
-chown ubuntu:ubuntu ~ubuntu/.bashrc
-TOKENSCRIPT
-  echo "    Token set."
-fi
+# Configure environment and git identity in a single SSH session
+echo "==> Configuring environment on remote..."
+$SSH_CMD bash -s << ENVSCRIPT
+# Helper: set or replace an env var in .bashrc
+set_env() {
+  local key="\$1" value="\$2"
+  sed -i "/\$key/d" ~ubuntu/.bashrc 2>/dev/null || true
+  echo "export \$key=\"\$value\"" >> ~ubuntu/.bashrc
+  echo "    \$key set."
+}
 
-# Set CLAUDE_CODE_MAX_OUTPUT_TOKENS for ubuntu
-echo "==> Setting CLAUDE_CODE_MAX_OUTPUT_TOKENS on remote..."
-$SSH_CMD bash -s << 'MAXTOKSCRIPT'
-grep -q "CLAUDE_CODE_MAX_OUTPUT_TOKENS" ~ubuntu/.bashrc 2>/dev/null && \
-  sed -i '/CLAUDE_CODE_MAX_OUTPUT_TOKENS/d' ~ubuntu/.bashrc
-echo 'export CLAUDE_CODE_MAX_OUTPUT_TOKENS="128000"' >> ~ubuntu/.bashrc
-chown ubuntu:ubuntu ~ubuntu/.bashrc
-MAXTOKSCRIPT
-echo "    CLAUDE_CODE_MAX_OUTPUT_TOKENS set."
+set_env CLAUDE_CODE_MAX_OUTPUT_TOKENS "128000"
+[ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ] && set_env CLAUDE_CODE_OAUTH_TOKEN "$CLAUDE_CODE_OAUTH_TOKEN"
+[ -n "${HF_TOKEN:-}" ] && set_env HF_TOKEN "$HF_TOKEN"
 
-# If we have a HF_TOKEN locally, inject it into ubuntu's .bashrc
-if [ -n "${HF_TOKEN:-}" ]; then
-  echo "==> Setting HF_TOKEN on remote..."
-  $SSH_CMD bash -s << HFSCRIPT
-grep -q "HF_TOKEN" ~ubuntu/.bashrc 2>/dev/null && \
-  sed -i '/HF_TOKEN/d' ~ubuntu/.bashrc
-echo 'export HF_TOKEN="$HF_TOKEN"' >> ~ubuntu/.bashrc
 chown ubuntu:ubuntu ~ubuntu/.bashrc
-HFSCRIPT
-  echo "    HF_TOKEN set."
-fi
 
-# Configure git identity for ubuntu user
-if [ -n "${GIT_USER_NAME:-}" ] || [ -n "${GIT_USER_EMAIL:-}" ]; then
-  echo "==> Configuring git identity for ubuntu..."
-  $SSH_CMD bash -s << GITSCRIPT
-[ -n "${GIT_USER_NAME}" ] && su - ubuntu -c "git config --global user.name \"${GIT_USER_NAME}\""
-[ -n "${GIT_USER_EMAIL}" ] && su - ubuntu -c "git config --global user.email \"${GIT_USER_EMAIL}\""
-GITSCRIPT
-  echo "    Git identity configured."
-fi
+[ -n "${GIT_USER_NAME:-}" ] && su - ubuntu -c "git config --global user.name \"${GIT_USER_NAME}\"" && echo "    Git user.name set."
+[ -n "${GIT_USER_EMAIL:-}" ] && su - ubuntu -c "git config --global user.email \"${GIT_USER_EMAIL}\"" && echo "    Git user.email set."
+ENVSCRIPT
 
 # Print the SSH command with username replaced to ubuntu
 UBUNTU_CMD=$(echo "$SSH_CMD" | sed 's/[a-zA-Z0-9_.-]*@/ubuntu@/')
