@@ -41,7 +41,7 @@ update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
 
 echo "==> Installing sudo, vim, tmux, gh if needed..."
 apt-get install -y -qq apt-transport-https software-properties-common > /dev/null
-curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg 2>/dev/null
 chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list
 apt-get update -qq
@@ -145,8 +145,11 @@ if [ -n "$GITHUB_REPO" ]; then
   DEPLOY_KEY=$($SSH_CMD cat ~ubuntu/.ssh/id_ed25519.pub)
 
   echo "==> Adding deploy key to $OWNER_REPO via gh..."
-  echo "$DEPLOY_KEY" | gh repo deploy-key add - --repo "$OWNER_REPO" --title "agentize-$(date +%Y%m%d-%H%M%S)" --allow-write
-  echo "    Deploy key added."
+  if echo "$DEPLOY_KEY" | gh repo deploy-key add - --repo "$OWNER_REPO" --title "agentize-$(date +%Y%m%d-%H%M%S)" --allow-write 2>/dev/null; then
+    echo "    Deploy key added."
+  else
+    echo "    Deploy key already exists, continuing."
+  fi
 
   REPO_DIR=$(basename "$GITHUB_REPO" .git)
   echo "==> Cloning $GITHUB_REPO to /workspace on remote..."
