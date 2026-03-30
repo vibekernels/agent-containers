@@ -13,27 +13,30 @@ POD_VOLUME=0
 
 usage() {
   cat <<EOF
-Usage: launchpod.sh [<repo>] [--gpu 4090|5090|h100] [--volume <gb>]
+Usage: launchpod.sh [<repo>] [--gpu 4090|5090|h100] [--volume <gb>] [--volume-id <id>]
 
 Launch a RunPod instance and run agentize.sh on it.
 
 Arguments:
-  <repo>          GitHub SSH URL (e.g. git@github.com:org/repo.git)
+  <repo>          GitHub repo (e.g. org/repo or git@github.com:org/repo.git)
                   If omitted, shows an interactive picker of vibekernels repos.
   --gpu TYPE      GPU type: 4090 (default), 5090, h100
   --volume GB     Network volume size in gigabytes (default: 20)
+  --volume-id ID  Use an existing network volume instead of creating a new one
 
 Examples:
   launchpod.sh
   launchpod.sh git@github.com:org/repo.git
   launchpod.sh git@github.com:org/repo.git --gpu h100
   launchpod.sh --gpu 5090 --volume 100
+  launchpod.sh --volume-id m3ijuvw5ji
 EOF
   exit 1
 }
 
 # Parse arguments
 REPO=""
+EXISTING_VOLUME_ID=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --gpu)
@@ -44,6 +47,11 @@ while [ $# -gt 0 ]; do
     --volume)
       shift
       VOLUME_SIZE="${1:?--volume requires a value}"
+      shift
+      ;;
+    --volume-id)
+      shift
+      EXISTING_VOLUME_ID="${1:?--volume-id requires a value}"
       shift
       ;;
     --help|-h)
@@ -100,6 +108,11 @@ if [ -z "$REPO" ]; then
   echo "    Selected: $REPO"
 fi
 
+# Normalize short org/repo format to full SSH URL
+if [[ "$REPO" =~ ^[^@/]+/[^@/]+$ ]] && [[ "$REPO" != git@* ]]; then
+  REPO="git@github.com:${REPO}.git"
+fi
+
 # Map GPU shortnames to RunPod GPU type IDs
 case "$GPU_TYPE" in
   4090)  GPU_ID="NVIDIA GeForce RTX 4090" ;;
@@ -148,44 +161,65 @@ if [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
   ENV_ARRAY=$(echo "$ENV_ARRAY" | jq --arg v "$CLAUDE_CODE_OAUTH_TOKEN" '. + [{"key": "CLAUDE_CODE_OAUTH_TOKEN", "value": $v}]')
 fi
 
-# Fetch all datacenters
-DC_QUERY=$(jq -n '{ query: "{ dataCenters { id name location } }" }')
-DC_RESPONSE=$(runpod_api "$DC_QUERY")
-DATACENTERS=$(echo "$DC_RESPONSE" | jq -r '.data.dataCenters[].id')
-
-# Try each datacenter: create network volume, then pod. Clean up volume on failure.
-echo "==> Creating pod with ${VOLUME_SIZE}GB network volume..."
 POD_ID=""
 NV_ID=""
-for DC in $DATACENTERS; do
-  # Create network volume in this datacenter
-  NV_QUERY=$(jq -n --arg name "${POD_NAME}-vol" --argjson size "$VOLUME_SIZE" --arg dc "$DC" '{
-    query: "mutation($input: CreateNetworkVolumeInput!) { createNetworkVolume(input: $input) { id name size dataCenterId } }",
-    variables: { input: { name: $name, size: $size, dataCenterId: $dc } }
-  }')
-  NV_RESPONSE=$(runpod_api "$NV_QUERY")
-  NV_ID=$(echo "$NV_RESPONSE" | jq -r '.data.createNetworkVolume.id // empty')
-  if [ -z "$NV_ID" ]; then
-    continue
-  fi
 
-  # Try to create pod with this volume
+if [ -n "$EXISTING_VOLUME_ID" ]; then
+  # Use existing network volume
+  echo "==> Using existing network volume: $EXISTING_VOLUME_ID"
+  NV_ID="$EXISTING_VOLUME_ID"
+
   MUTATION="mutation { podFindAndDeployOnDemand(input: { name: \"$POD_NAME\", imageName: \"runpod/pytorch:1.0.3-cu1281-torch280-ubuntu2404\", gpuTypeId: \"$GPU_ID\", cloudType: ALL, containerDiskInGb: $CONTAINER_DISK, gpuCount: 1, ports: \"22/tcp\", startSsh: true, supportPublicIp: true, networkVolumeId: \"$NV_ID\", volumeMountPath: \"/workspace\" }) { id name desiredStatus machine { podHostId } } }"
   DEPLOY_QUERY=$(jq -n --arg q "$MUTATION" '{ query: $q }')
   DEPLOY_RESPONSE=$(runpod_api "$DEPLOY_QUERY")
   POD_ID=$(echo "$DEPLOY_RESPONSE" | jq -r '.data.podFindAndDeployOnDemand.id // empty')
 
   if [ -n "$POD_ID" ]; then
-    echo "    Network volume: $NV_ID (datacenter: $DC)"
     echo "    Pod created: $POD_ID"
-    break
+  else
+    ERROR_MSG=$(echo "$DEPLOY_RESPONSE" | jq -r '.errors[0].message // empty')
+    echo "Error: Failed to deploy pod with existing volume." >&2
+    echo "  ${ERROR_MSG:-$DEPLOY_RESPONSE}" >&2
+    exit 1
   fi
+else
+  # Create a new network volume, trying each datacenter
+  # Fetch all datacenters
+  DC_QUERY=$(jq -n '{ query: "{ dataCenters { id name location } }" }')
+  DC_RESPONSE=$(runpod_api "$DC_QUERY")
+  DATACENTERS=$(echo "$DC_RESPONSE" | jq -r '.data.dataCenters[].id')
 
-  # Pod failed in this datacenter — delete the volume and try next
-  DEL_QUERY=$(jq -n --arg q "mutation { deleteNetworkVolume(input: { id: \"$NV_ID\" }) }" '{ query: $q }')
-  runpod_api "$DEL_QUERY" > /dev/null
-  NV_ID=""
-done
+  echo "==> Creating pod with ${VOLUME_SIZE}GB network volume..."
+  for DC in $DATACENTERS; do
+    # Create network volume in this datacenter
+    NV_QUERY=$(jq -n --arg name "${POD_NAME}-vol" --argjson size "$VOLUME_SIZE" --arg dc "$DC" '{
+      query: "mutation($input: CreateNetworkVolumeInput!) { createNetworkVolume(input: $input) { id name size dataCenterId } }",
+      variables: { input: { name: $name, size: $size, dataCenterId: $dc } }
+    }')
+    NV_RESPONSE=$(runpod_api "$NV_QUERY")
+    NV_ID=$(echo "$NV_RESPONSE" | jq -r '.data.createNetworkVolume.id // empty')
+    if [ -z "$NV_ID" ]; then
+      continue
+    fi
+
+    # Try to create pod with this volume
+    MUTATION="mutation { podFindAndDeployOnDemand(input: { name: \"$POD_NAME\", imageName: \"runpod/pytorch:1.0.3-cu1281-torch280-ubuntu2404\", gpuTypeId: \"$GPU_ID\", cloudType: ALL, containerDiskInGb: $CONTAINER_DISK, gpuCount: 1, ports: \"22/tcp\", startSsh: true, supportPublicIp: true, networkVolumeId: \"$NV_ID\", volumeMountPath: \"/workspace\" }) { id name desiredStatus machine { podHostId } } }"
+    DEPLOY_QUERY=$(jq -n --arg q "$MUTATION" '{ query: $q }')
+    DEPLOY_RESPONSE=$(runpod_api "$DEPLOY_QUERY")
+    POD_ID=$(echo "$DEPLOY_RESPONSE" | jq -r '.data.podFindAndDeployOnDemand.id // empty')
+
+    if [ -n "$POD_ID" ]; then
+      echo "    Network volume: $NV_ID (datacenter: $DC)"
+      echo "    Pod created: $POD_ID"
+      break
+    fi
+
+    # Pod failed in this datacenter — delete the volume and try next
+    DEL_QUERY=$(jq -n --arg q "mutation { deleteNetworkVolume(input: { id: \"$NV_ID\" }) }" '{ query: $q }')
+    runpod_api "$DEL_QUERY" > /dev/null
+    NV_ID=""
+  done
+fi
 
 if [ -z "$POD_ID" ]; then
   echo "Error: Could not deploy pod in any datacenter" >&2
