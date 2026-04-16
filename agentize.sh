@@ -111,7 +111,7 @@ echo "==> Adding ~/.local/bin to PATH in .bashrc..."
 su - ubuntu -c 'grep -q "/.local/bin" ~/.bashrc || echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> ~/.bashrc'
 
 echo "==> Adding dangerclaude alias to .bashrc..."
-su - ubuntu -c 'grep -q "dangerclaude" ~/.bashrc || echo "alias dangerclaude='"'"'claude --dangerously-skip-permissions --model opus --effort medium'"'"'" >> ~/.bashrc'
+su - ubuntu -c 'grep -q "dangerclaude" ~/.bashrc || echo "alias dangerclaude='"'"'claude --dangerously-skip-permissions --model opus --effort xhigh'"'"'" >> ~/.bashrc'
 
 echo "==> Adding auto-tmux to .bashrc..."
 su - ubuntu -c 'grep -q "auto-tmux" ~/.bashrc || cat >> ~/.bashrc << '"'"'TMUXBLOCK'"'"'
